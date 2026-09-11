@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:4000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000/api';
 
 const buildQuery = (params: Record<string, string | undefined>) => {
   const query = new URLSearchParams();
