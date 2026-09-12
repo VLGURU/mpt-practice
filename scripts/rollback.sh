@@ -5,38 +5,30 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 ENV_FILE="$ROOT_DIR/.env"
-COMPOSE="docker compose -f docker-compose.prod.yml --env-file $ENV_FILE"
+COMPOSE="docker compose -f docker-compose.prod.yml --env-file $ENV_FILE -p mpt"
 
-if [[ ! -f "$ROOT_DIR/.last_successful_tag" ]]; then
-  echo "ERROR: .last_successful_tag not found"
+GOOD_SHA="$(cat "$ROOT_DIR/.last_successful_sha" 2>/dev/null | tr -d '[:space:]' || true)"
+if [[ -z "$GOOD_SHA" ]]; then
+  echo "ERROR: .last_successful_sha missing/empty"
   exit 1
 fi
 
-GOOD_TAG="$(cat "$ROOT_DIR/.last_successful_tag" | tr -d '[:space:]')"
-if [[ -z "$GOOD_TAG" ]]; then
-  echo "ERROR: last successful tag is empty"
-  exit 1
-fi
+echo "[rollback] Rolling back to: $GOOD_SHA"
 
-echo "[rollback] Rolling back to: $GOOD_TAG"
+git fetch origin main
+git checkout -f "$GOOD_SHA"
+git reset --hard "$GOOD_SHA"
 
-if grep -qE '^IMAGE_TAG=' "$ENV_FILE"; then
-  sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$GOOD_TAG/" "$ENV_FILE"
-else
-  echo "IMAGE_TAG=$GOOD_TAG" >> "$ENV_FILE"
-fi
-
-$COMPOSE pull || true
-$COMPOSE up -d --remove-orphans
+$COMPOSE up -d --build --remove-orphans
 
 echo "[rollback] Checking health..."
 for i in {1..60}; do
   if curl -fsS http://127.0.0.1/api/health >/dev/null; then
-    echo "[rollback] OK: rollback version is healthy"
+    echo "[rollback] OK"
     exit 0
   fi
   sleep 2
 done
 
-echo "[rollback] ERROR: rollback healthcheck failed too"
+echo "[rollback] ERROR: rollback failed too"
 exit 1
