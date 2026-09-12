@@ -1,4 +1,4 @@
-name: CI-CD
+name: Deploy (self-hosted)
 
 on:
   push:
@@ -10,13 +10,15 @@ permissions:
 jobs:
   deploy:
     runs-on: [self-hosted, Linux, ARM64]
+
     steps:
-      - name: Deploy locally on the server
+      - name: Mark repo as safe (git)
+        run: git config --global --add safe.directory /opt/mpt-practice
+
+      - name: Deploy on server
         shell: bash
         run: |
           set -euo pipefail
           cd /opt/mpt-practice
-          git fetch origin main
-          git reset --hard origin/main
           chmod +x scripts/*.sh
           ./scripts/deploy.sh "${{ github.sha }}"
