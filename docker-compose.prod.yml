@@ -18,7 +18,9 @@ services:
       - mpt_net
 
   backend:
-    image: ghcr.io/${GHCR_OWNER}/mpt-practice-backend:${IMAGE_TAG}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     environment:
       PORT: "4000"
       DB_HOST: db
@@ -41,7 +43,9 @@ services:
       - mpt_net
 
   frontend:
-    image: ghcr.io/${GHCR_OWNER}/mpt-practice-frontend:${IMAGE_TAG}
+    build:
+      context: .
+      dockerfile: Dockerfile
     depends_on:
       backend:
         condition: service_healthy
@@ -50,11 +54,6 @@ services:
     restart: unless-stopped
     networks:
       - mpt_net
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
 networks:
   mpt_net:
