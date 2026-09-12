@@ -1,0 +1,25 @@
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# env
+.env
+.env.*
+!.env.production
+
+# deps
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# builds
+dist/
+build/
+coverage/
+
+# logs
+*.log
+
+# docker volumes (если вдруг)
+pgdata/
