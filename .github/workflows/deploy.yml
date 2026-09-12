@@ -6,70 +6,17 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
-  build_push_deploy:
-    runs-on: ubuntu-latest
-
+  deploy:
+    runs-on: [self-hosted, Linux, ARM64]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set lowercase owner
-        run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & Push backend (multi-arch)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ env.OWNER_LC }}/mpt-practice-backend:${{ github.sha }}
-            ghcr.io/${{ env.OWNER_LC }}/mpt-practice-backend:latest
-
-      - name: Build & Push frontend (multi-arch)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ghcr.io/${{ env.OWNER_LC }}/mpt-practice-frontend:${{ github.sha }}
-            ghcr.io/${{ env.OWNER_LC }}/mpt-practice-frontend:latest
-
-      - name: Connect to Tailscale
-        uses: tailscale/github-action@v3
-        with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.1.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          port: ${{ secrets.SERVER_SSH_PORT }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            set -e
-            cd ${{ secrets.DEPLOY_PATH }}
-            git fetch origin main
-            git reset --hard origin/main
-            chmod +x scripts/*.sh
-            ./scripts/deploy.sh ${{ github.sha }}
+      - name: Deploy locally on the server
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /opt/mpt-practice
+          git fetch origin main
+          git reset --hard origin/main
+          chmod +x scripts/*.sh
+          ./scripts/deploy.sh "${{ github.sha }}"
